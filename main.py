@@ -12,6 +12,11 @@ user_progress = user.level_progress
 default_language = user.lang
 
 
+@app.get("/")
+async def root():
+    return {"message": "hello"}
+
+
 @app.get("/user")
 async def user_details():
     return {"instrument": default_instrument, "user progress": user_progress, "user language": default_language}

@@ -3,3 +3,4 @@ uvicorn[standard]
 scamp
 music21
 googletrans
+gunicorn

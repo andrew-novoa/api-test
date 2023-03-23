@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from typing import Optional
 import random
 import user
 from generate import generate_screen
@@ -23,13 +24,14 @@ async def user_details():
 
 
 @app.get("/{book}")
-async def book_details(book: str, chapter: int):
+async def book_details(book: str, chapter: Optional[int]):
     output_dict = {}
     if chapter:
         lesson_names = []
         for l in list(question_levels[default_instrument][book][chapter]["lessons"].keys()):
             lesson_names.append(question_levels[default_instrument][book][chapter]["lessons"][l]["lesson name"])
         return {"number": chapter, "name": question_levels[default_instrument][book][chapter]["chapter name"], "lesson names": lesson_names}
+    
     else:
         for chapter_num in list(question_levels[default_instrument][book].keys()):
             lesson_length = len(list(question_levels[default_instrument][book][chapter_num]["lessons"].keys()))

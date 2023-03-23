@@ -50,7 +50,7 @@ async def lesson_details(book: str, lesson_id: str):
 async def generate_lesson(book: str, lesson_id: str):
     user_level = book[0].upper() + lesson_id
     question_dict = {}
-    question_dict["lessons"] = []
+    question_dict["lessons"] = {}
     for lesson_number in range(1, 21):
         question_type = random.choice(list(question_levels[default_instrument][book][int(lesson_id[0])]["lessons"][int(lesson_id[-1])]["question choices"].keys()))
         answer_type = random.choice(list(question_levels[default_instrument][book][int(lesson_id[0])]["lessons"][int(lesson_id[-1])]["question choices"][question_type].keys()))

@@ -59,7 +59,7 @@ async def generate_lesson(book: str, lesson_id: str):
     user_level = book[0].upper() + lesson_id
     question_dict = {}
     question_dict["lessons"] = {}
-    while len(question_dict) != number_of_questions:
+    while len(question_dict["lessons"]) != number_of_questions:
         question_type = random.choice(list(question_levels[default_instrument][book][int(lesson_id[0])]["lessons"][int(lesson_id[-1])]["question choices"].keys()))
         answer_type = random.choice(list(question_levels[default_instrument][book][int(lesson_id[0])]["lessons"][int(lesson_id[-1])]["question choices"][question_type].keys()))
         screen = generate_screen(question_type, answer_type, user_level, default_language)
@@ -68,7 +68,7 @@ async def generate_lesson(book: str, lesson_id: str):
         question_render = str(screen[1]) ### can be None
         question_text = screen[2]
         answer_elements = str(screen[3]) ### can be many formats, if multiple choice, will return tuple
-        
+
         question_dict["lessons"][len(question_dict) + 1] = [prompt_text, question_render, question_text, answer_elements]
 
     return question_dict

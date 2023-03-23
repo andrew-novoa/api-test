@@ -56,6 +56,6 @@ async def generate_lesson(book: str, lesson_id: str, q: Optional[int] = None):
         screen = generate_screen(question_type, answer_type, user_level, default_language)
         question_dict[lesson_number] = [screen[0], str(screen[1]), screen[2], str(screen[3])]
     if q:
-        return question_dict[str(q)]
+        return question_dict[q]
     return question_dict
 

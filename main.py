@@ -69,7 +69,7 @@ async def generate_lesson(book: str, lesson_id: str):
         question_text = screen[2]
         answer_elements = str(screen[3]) ### can be many formats, if multiple choice, will return tuple
 
-        question_dict["lessons"][len(question_dict) + 1] = [prompt_text, question_render, question_text, answer_elements]
+        question_dict["lessons"][len(question_dict["lessons"]) + 1] = [prompt_text, question_render, question_text, answer_elements]
 
     return question_dict
 

@@ -24,7 +24,7 @@ async def user_details():
 
 
 @app.get("/{book}")
-async def book_details(book: str, chapter: Optional[int]):
+async def book_details(book: str, chapter: Optional[int] = None):
     output_dict = {}
     if chapter:
         lesson_names = []
@@ -32,14 +32,13 @@ async def book_details(book: str, chapter: Optional[int]):
             lesson_names.append(question_levels[default_instrument][book][chapter]["lessons"][l]["lesson name"])
         return {"number": chapter, "name": question_levels[default_instrument][book][chapter]["chapter name"], "lesson names": lesson_names}
     
-    else:
-        for chapter_num in list(question_levels[default_instrument][book].keys()):
-            lesson_length = len(list(question_levels[default_instrument][book][chapter_num]["lessons"].keys()))
-            lesson_names = []
-            for l in list(question_levels[default_instrument][book][chapter_num]["lessons"].keys()):
-                lesson_names.append(question_levels[default_instrument][book][chapter_num]["lessons"][l]["lesson name"])
-            output_dict[chapter_num] = {"number": chapter_num, "name": question_levels[default_instrument][book][chapter_num]["chapter name"], "length": lesson_length, "lesson names": lesson_names}
-        return output_dict
+    for chapter_num in list(question_levels[default_instrument][book].keys()):
+        lesson_length = len(list(question_levels[default_instrument][book][chapter_num]["lessons"].keys()))
+        lesson_names = []
+        for l in list(question_levels[default_instrument][book][chapter_num]["lessons"].keys()):
+            lesson_names.append(question_levels[default_instrument][book][chapter_num]["lessons"][l]["lesson name"])
+        output_dict[chapter_num] = {"number": chapter_num, "name": question_levels[default_instrument][book][chapter_num]["chapter name"], "length": lesson_length, "lesson names": lesson_names}
+    return output_dict
 
 
 @app.get("/{book}/{lesson_id}")

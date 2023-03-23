@@ -30,7 +30,7 @@ async def book_details(book: str):
         lesson_names = []
         for l in list(question_levels[default_instrument][book][chapter_num]["lessons"].keys()):
             lesson_names.append(question_levels[default_instrument][book][chapter_num]["lessons"][l]["lesson name"])
-        output_dict[chapter_num] = {"name": question_levels[default_instrument][book][chapter_num]["chapter name"], "length": lesson_length, "lesson names": lesson_names}
+        output_dict[chapter_num] = {"number": chapter_num, "name": question_levels[default_instrument][book][chapter_num]["chapter name"], "length": lesson_length, "lesson names": lesson_names}
     return output_dict
 
 

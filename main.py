@@ -47,7 +47,7 @@ async def lesson_details(book: str, lesson_id: str):
 
 
 @app.get("/{book}/{lesson_id}/generate")
-async def generate_lesson(book: str, lesson_id: str):
+async def generate_lesson(book: str, lesson_id: str, q: Optional[int] = None):
     user_level = book[0].upper() + lesson_id
     question_dict = {}
     for lesson_number in range(1, 21):
@@ -55,5 +55,7 @@ async def generate_lesson(book: str, lesson_id: str):
         answer_type = random.choice(list(question_levels[default_instrument][book][int(lesson_id[0])]["lessons"][int(lesson_id[-1])]["question choices"][question_type].keys()))
         screen = generate_screen(question_type, answer_type, user_level, default_language)
         question_dict[lesson_number] = [screen[0], str(screen[1]), screen[2], str(screen[3])]
+    if q:
+        return question_dict[str(q)]
     return question_dict
 

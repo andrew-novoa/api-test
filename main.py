@@ -15,14 +15,17 @@ default_language = user.lang
 
 @app.get("/")
 async def root():
-    return {"message": "hello"}
+    return {"message": "welcome to my API :)"}
 
 
+### General user details ###
 @app.get("/user")
 async def user_details():
     return {"instrument": default_instrument, "user progress": user_progress, "user language": default_language}
 
 
+### Used to get general details about the book type: "theory", "listen", or "rhythm" ###
+### Can query the chapter number to get more info about the queried chapter ###
 @app.get("/{book}")
 async def book_details(book: str, chapter: Optional[int] = None):
     output_dict = {}
@@ -41,20 +44,29 @@ async def book_details(book: str, chapter: Optional[int] = None):
     return output_dict
 
 
+### Lesson ids are in "chapter-lesson" format, e.g. "3-1". Used to see what question and answer types are available ###
 @app.get("/{book}/{lesson_id}")
 async def lesson_details(book: str, lesson_id: str):
     return question_levels[default_instrument][book][int(lesson_id[0])]["lessons"][int(lesson_id[-1])]
 
 
+### Is used to generate any number of questions and answers ###
 @app.get("/{book}/{lesson_id}/generate")
 async def generate_lesson(book: str, lesson_id: str):
+    number_of_questions = 20
     user_level = book[0].upper() + lesson_id
     question_dict = {}
     question_dict["lessons"] = {}
-    for lesson_number in range(1, 21):
+    for question_number in range(1, number_of_questions + 1):
         question_type = random.choice(list(question_levels[default_instrument][book][int(lesson_id[0])]["lessons"][int(lesson_id[-1])]["question choices"].keys()))
         answer_type = random.choice(list(question_levels[default_instrument][book][int(lesson_id[0])]["lessons"][int(lesson_id[-1])]["question choices"][question_type].keys()))
         screen = generate_screen(question_type, answer_type, user_level, default_language)
-        question_dict["lessons"][lesson_number] = [screen[0], str(screen[1]), screen[2], str(screen[3])]
+
+        prompt_text = screen[0]
+        question_render = str(screen[1]) ### can be None
+        question_text = screen[2]
+        answer_elements = str(screen[3]) ### can be many formats, if multiple choice, will return tuple
+        question_dict["lessons"][question_number] = [prompt_text, question_render, question_text, answer_elements]
+        
     return question_dict
 

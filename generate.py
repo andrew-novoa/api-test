@@ -3,7 +3,7 @@ import user
 from scamp import *
 from theory import *
 from qa_util import *
-from music21 import chord, harmony, interval, key, musicxml, note, pitch, roman, scale, stream
+from music21 import base, chord, harmony, interval, key, musicxml, note, pitch, roman, scale, stream
 from googletrans import Translator
 from levels import question_levels, content_levels
 
@@ -2389,6 +2389,14 @@ def generate_answer(input_answer_type, input_question_type, question_dict, input
     elif input_answer_type == "mc audio":
         new_answer = generate_mc_audio_answer(input_question_type, question_dict)
 
+    if base.Music21Object.isStream(new_answer) == True:
+        musicXML_exporter = musicxml.m21ToXml.ScoreExporter(new_answer)
+        new_answer = musicXML_exporter.parse()
+    elif type(new_answer) == tuple:
+        for item in new_answer:
+            if base.Music21Object.isStream(item) == True:
+                musicXML_exporter = musicxml.m21ToXml.ScoreExporter(item)
+                item = musicXML_exporter.parse()
     return new_answer
 
 

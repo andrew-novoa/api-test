@@ -643,7 +643,7 @@ def generate_question(input_question_type, input_answer_type, input_user_level):
 
 def generate_answer(input_answer_type, input_question_type, question_dict, input_user_level):
 
-    def generate_text_answer(input_question_type, question_dict): #complete
+    def generate_text_answer(input_question_type, question_dict, input_user_level): #complete
 
         if input_question_type == "text":
             if question_dict[0] == "chord intervals":
@@ -864,7 +864,7 @@ def generate_answer(input_answer_type, input_question_type, question_dict, input
                     arp_inversion = "root"
                 return arp_inversion
 
-    def generate_piano_answer(input_question_type, question_dict): #complete
+    def generate_piano_answer(input_question_type, question_dict, input_user_level): #complete
 
         if input_question_type == "text":
             if question_dict[0] == "play pitch":
@@ -916,7 +916,7 @@ def generate_answer(input_answer_type, input_question_type, question_dict, input
             if question_dict[0] == "play chord tone":
                 return question_dict[2][2].getChordStep(question_dict[3])
 
-    def generate_record_answer(input_question_type, question_dict): #complete
+    def generate_record_answer(input_question_type, question_dict, input_user_level): #complete
 
         if input_question_type == "text":
             if question_dict[0] == "play pitch":
@@ -975,7 +975,7 @@ def generate_answer(input_answer_type, input_question_type, question_dict, input
         elif input_question_type == "arpeggio":
             return question_dict[2][1]
 
-    def generate_mc_text_answer(input_question_type, question_dict): #complete
+    def generate_mc_text_answer(input_question_type, question_dict, input_user_level): #complete
 
         if input_question_type == "text":
             if question_dict[0] == "convert roman":
@@ -1571,7 +1571,7 @@ def generate_answer(input_answer_type, input_question_type, question_dict, input
                 random.shuffle(answer_list)
                 return answer_list, str(answer_list.index(correct_answer) + 1)
             
-    def generate_mc_xml_answer(input_question_type, question_dict): #complete
+    def generate_mc_xml_answer(input_question_type, question_dict, input_user_level): #complete
 
         if input_question_type == "text":
             if question_dict[0] == "correct inversion":
@@ -1991,7 +1991,7 @@ def generate_answer(input_answer_type, input_question_type, question_dict, input
                 random.shuffle(answer_list)
                 return answer_list, str(answer_list.index(correct_answer) + 1)
 
-    def generate_mc_audio_answer(input_question_type, question_dict): #complete
+    def generate_mc_audio_answer(input_question_type, question_dict, input_user_level): #complete
     
         if input_question_type == "text": #need to convert all of these to midi!!!
             if question_dict[0] == "chord quality":
@@ -2319,7 +2319,7 @@ def generate_answer(input_answer_type, input_question_type, question_dict, input
                 random.shuffle(answer_list)
                 return answer_list, str(answer_list.index(correct_answer) + 1)
 
-    def generate_drag_drop_keyboard_answer(input_question_type, question_dict): #hold off
+    def generate_drag_drop_keyboard_answer(input_question_type, question_dict, input_user_level): #hold off
 
         if input_question_type == "note":
             pass
@@ -2345,7 +2345,7 @@ def generate_answer(input_answer_type, input_question_type, question_dict, input
         elif input_question_type == "arpeggio":
             pass
 
-    def generate_drag_drop_snippet_answer(input_question_type, question_dict): #hold off
+    def generate_drag_drop_snippet_answer(input_question_type, question_dict, input_user_level): #hold off
 
         if input_question_type == "note":
             pass
@@ -2372,31 +2372,32 @@ def generate_answer(input_answer_type, input_question_type, question_dict, input
             pass
 
     if input_answer_type == "text":
-        new_answer = generate_text_answer(input_question_type, question_dict)
+        new_answer = generate_text_answer(input_question_type, question_dict, input_user_level)
     
     elif input_answer_type == "piano":
-        new_answer = generate_piano_answer(input_question_type, question_dict)
+        new_answer = generate_piano_answer(input_question_type, question_dict, input_user_level)
     
     elif input_answer_type == "record":
-        new_answer = generate_record_answer(input_question_type, question_dict)
+        new_answer = generate_record_answer(input_question_type, question_dict, input_user_level)
     
     elif input_answer_type == "mc text":
-        new_answer = generate_mc_text_answer(input_question_type, question_dict)
+        new_answer = generate_mc_text_answer(input_question_type, question_dict, input_user_level)
 
     elif input_answer_type == "mc xml":
-        new_answer = generate_mc_xml_answer(input_question_type, question_dict)
+        new_answer = generate_mc_xml_answer(input_question_type, question_dict, input_user_level)
 
     elif input_answer_type == "mc audio":
-        new_answer = generate_mc_audio_answer(input_question_type, question_dict)
+        new_answer = generate_mc_audio_answer(input_question_type, question_dict, input_user_level)
 
-    if base.Music21Object.isStream(new_answer) == True:
-        musicXML_exporter = musicxml.m21ToXml.ScoreExporter(new_answer)
-        new_answer = musicXML_exporter.parse()
-    elif type(new_answer) == tuple:
-        for item in new_answer:
-            if base.Music21Object.isStream(item) == True:
-                musicXML_exporter = musicxml.m21ToXml.ScoreExporter(item)
-                item = musicXML_exporter.parse()
+    if type(new_answer) in [stream.Stream, stream.Measure]:
+        musicXML_exporter = musicxml.m21ToXml.ScoreExporter(new_answer, makeNotation=True)
+        return musicXML_exporter.parse()
+    elif type(new_answer) == tuple and type(new_answer[0][0]) in [stream.Stream, stream.Measure]:
+        converted_list = []
+        for item in new_answer[0]:
+            musicXML_exporter = musicxml.m21ToXml.ScoreExporter(item, makeNotation=True)
+            converted_list.append(musicXML_exporter.parse())
+        return (converted_list, new_answer[1])
     return new_answer
 
 
@@ -2418,10 +2419,10 @@ def generate_screen(question_type, answer_type, user_level, user_language="en"):
         # print(question_elements)
         if type(finished_question) == tuple:
             # finished_question[0].show("text")
-            musicXML_exporter = musicxml.m21ToXml.ScoreExporter(finished_question[0])
+            musicXML_exporter = musicxml.m21ToXml.ScoreExporter(finished_question[0], makeNotation=True)
         else:
             # finished_question.show("text")
-            musicXML_exporter = musicxml.m21ToXml.ScoreExporter(finished_question)
+            musicXML_exporter = musicxml.m21ToXml.ScoreExporter(finished_question, makeNotation=True)
         question_render = musicXML_exporter.parse()
 
     ### Export to MIDI ###
@@ -2443,64 +2444,3 @@ def generate_screen(question_type, answer_type, user_level, user_language="en"):
 
 
 
-
-
-
-# #For testing#
-# for n in range(1):
-#     # user_instrument = random.choice(["piano", "guitar", "bass", "ukulele"])
-#     random_book = random.choice(list(question_levels[user_instrument].keys()))
-#     random_chapter = random.choice(list(question_levels[user_instrument][random_book].keys()))
-#     random_lesson = random.choice(list(question_levels[user_instrument][random_book][random_chapter]["lessons"].keys()))
-#     question_type = random.choice(list(question_levels[user_instrument][random_book][random_chapter]["lessons"][random_lesson]["question choices"].keys()))
-#     answer_type = random.choice(list(question_levels[user_instrument][random_book][random_chapter]["lessons"][random_lesson]["question choices"][question_type].keys()))
-#     # question_type = "text"
-#     # answer_type = "mc audio"
-#     user_level = random_book[0].upper() + str(random_chapter) + "-" + str(random_lesson)
-
-
-#     print(user_level, question_type, "with", answer_type)
-#     screen = generate_screen(question_type, answer_type, user_level, user.lang)
-
-
-
-#     ### Print statements for testing ###
-#     print(screen[0])
-#     # if screen[1] != None:
-#     #     musicxml.m21ToXml.ScoreExporter.dump(screen[1])
-#     print(screen[2])
-#     answer_elem = screen[3]
-
-#     if "mc" in answer_type: ### separate answer elements into choices and correct answer
-#         print(answer_elem[0])
-#         correct_answer = answer_elem[1]
-#     else:
-#         correct_answer = answer_elem
-
-#     play_audio = False
-#     if answer_type == "mc audio" and play_audio == True: ### play audio
-#         s = Session()
-#         piano = s.new_part("piano")
-#         for possible_answer in answer_elem[0]:
-#             if type(possible_answer) == tuple: #single item samples
-#                 if type(possible_answer[0]) == list:
-#                     piano.play_chord(possible_answer[0], possible_answer[1], possible_answer[2])
-#                     wait(2, "time")
-#                 elif type(possible_answer[0]) == str:
-#                     wait(possible_answer[2], "beats")
-#                 else:
-#                     piano.play_note(possible_answer[0], possible_answer[1], possible_answer[2])
-#                 wait(2, "time")
-
-#             elif type(possible_answer) == list: #multiple item samples like chord progression or excerpt
-#                 for each_element in possible_answer:
-#                     if type(each_element[0]) == list:
-#                         piano.play_chord(each_element[0], each_element[1], each_element[2])
-#                     elif type(each_element[0]) == str:
-#                         wait(each_element[2], "beats")
-#                     else:
-#                         piano.play_note(each_element[0], each_element[1], each_element[2])     
-#                     wait(2, "time")
-
-#     print("Correct answer is:", correct_answer)
-#     print(" ")

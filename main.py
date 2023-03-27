@@ -1,6 +1,5 @@
 from fastapi import FastAPI
 from typing import Optional
-import copy
 import random
 import user
 from generate import generate_screen
@@ -19,7 +18,7 @@ def get_user_level_details(user_level):
         book = "theory"
     elif user_level[0] == "R":
         book = "rhythm"
-    if user_level[0] == "L":
+    elif user_level[0] == "L":
         book = "listen"
 
     lesson_id = user_level[1:]
@@ -73,15 +72,15 @@ async def practice_details():
 
 
 @app.get("/practice/generate")
-async def generate_practice(n: Optional[int] = None):
-    if n:
-        number_of_questions = n
+async def generate_practice(q: Optional[int] = None):
+    if q:
+        number_of_questions = q
     else:
         number_of_questions = 20
     user_levels = user_progress
     question_dict = generate_question_list(user_levels, number_of_questions)
 
-    return dict(question_dict)
+    return question_dict
 
 
 ### Used to get general details about the book type: "theory", "listen", or "rhythm" ###
@@ -137,4 +136,6 @@ async def generate_lesson(book: str, lesson_id: str):
     user_level = book[0].upper() + lesson_id
     question_dict = generate_question_list(user_level, number_of_questions)
 
-    return copy.deepcopy(question_dict)
+    return question_dict
+
+

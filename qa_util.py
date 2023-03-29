@@ -1,11 +1,17 @@
 import math
-from scamp import *
+import tempfile
 import random
+
+from music21 import (chord, clef, harmony, interval, key, meter, musicxml, note, roman,
+                     scale, stream)
+from scamp import *
+
+import user
+from levels import content_levels
 from theory import *
-from music21 import chord, clef, harmony, interval, key, meter, note, roman, scale, stream
 
 ### Set Clef ###
-user_instrument = "piano"
+user_instrument = user.instrument
 if user_instrument == "bass":
     user_clef = clef.BassClef()
 else:
@@ -23,6 +29,41 @@ function_defaults = {
     "note value":[[], None],
     "time elements":[[], []]
     }
+
+def call_question_function(function_string, input_user_level, content_override=None):
+    if content_override is None:
+        content_override = {}
+
+    book_map = {"T": "theory", "R": "rhythm", "L": "listen"}
+    book = book_map[input_user_level[0]]
+
+    admin_content = content_levels[user.instrument][book][input_user_level]
+    function_fills = {}
+
+    for i in range(len(function_defaults[function_string])):
+        if content_override and str(i) in content_override:
+            function_fills[i] = content_override[str(i)]
+        elif admin_content and str(i) in admin_content["generate " + function_string]:
+            function_fills[i] = admin_content["generate " + function_string][str(i)]
+        else:
+            function_fills[i] = function_defaults[function_string][i]
+
+    function_map = {
+        "note": generate_note,
+        "chord": generate_chord,
+        "chord progression": generate_chord_progression,
+        "interval": generate_interval,
+        "scale": generate_scale,
+        "excerpt": generate_excerpt,
+        "rhythm": generate_rhythm,
+        "arpeggio": generate_arpeggio,
+        "note value": generate_note_value
+    }
+
+    if function_string in function_map:
+        return function_map[function_string](*[function_fills[i] for i in range(len(function_defaults[function_string]))])
+    else:
+        raise ValueError(f"Unknown function_string: {function_string}")
 
 ### Main Functions ###
 
@@ -695,4 +736,218 @@ def generate_prompt_text(question_type, answer_type, language="en"):
 
     prompt_text_full = prompt_text1 + " and " + prompt_text2
     return prompt_text_full
+
+def export_m21_to_xml(m21_stream):
+    musicXML_exporter = musicxml.m21ToXml.GeneralObjectExporter(m21_stream)
+    converted_stream_string = musicXML_exporter.parse()
+    tf = tempfile.NamedTemporaryFile(suffix=".xml", dir="/Users/andrewnovoa/Documents/qa_generate/xml_files", delete=False)
+    tf.write(converted_stream_string)
+    tf.close()
+    return tf.name
+
+
+### Answer Functions ###
+
+def answer_chord_intervals(q_dict, mc=False):
+    chord_intervals = q_dict[2].measure(1)[0].annotateIntervals(inPlace=False, stripSpecifiers=False)
+    return [ly.text for ly in reversed(chord_intervals.lyrics)]
+
+def answer_play_pitch(q_dict, mc=False):
+    note_string_form = q_dict[2].flatten().notes.stream()[0].name
+    if "-" in note_string_form:
+        note_string_form = note_string_form.replace("-", "b")
+    return note_string_form
+
+def answer_convert_roman(q_dict, user_level, mc=False):
+    answer_list = []
+    correct_answer = harmony.chordSymbolFromChord(chord.Chord(roman.RomanNumeral(q_dict[3], q_dict[2].keySignature.asKey()).pitches)).figure
+    if mc == False:
+        return correct_answer
+    elif mc == True:
+        answer_list.append(correct_answer)
+        while len(answer_list) != 4:
+            random_quality = random.choice(["", "m", "+", "dim"])
+            wrong_answer = harmony.chordSymbolFromChord(call_question_function("chord", user_level, {"1": [random_quality]})).figure
+            if wrong_answer not in answer_list:
+                answer_list.append(wrong_answer)
+        random.shuffle(answer_list)
+        return answer_list, answer_list.index(correct_answer) + 1
+
+def answer_relative_minor_scale(q_dict, user_level, output="string", mc=False):
+    answer_list = []
+    current_scale_pitches = scale.DiatonicScale(q_dict[2][2][0])
+    relative_minor_scale = current_scale_pitches.getRelativeMinor()
+    correct_answer = [str(p.name) for p in relative_minor_scale.pitches]
+
+    def create_scale_stream(scale_pitches, duration):
+        scale_stream = stream.Stream()
+        for pitch_name in scale_pitches:
+            scale_note = note.Note(pitch_name)
+            scale_note.duration.quarterLength = duration
+            scale_stream.append(scale_note)
+        scale_stream.makeMeasures()
+        return scale_stream
+
+    if output == "xml":
+        correct_duration = q_dict[2][0].measure(1)[0].duration.quarterLength
+        correct_answer = create_scale_stream(correct_answer, correct_duration)
+        correct_answer = export_m21_to_xml(correct_answer)
+
+    if not mc:
+        return correct_answer
+
+    answer_list.append(correct_answer)
+    parallel_minor_scale = current_scale_pitches.getParallelMinor()
+    parallel_minor = [str(p.name) for p in parallel_minor_scale.pitches]
+
+    if output == "xml":
+        parallel_minor = create_scale_stream(parallel_minor, correct_duration)
+
+    answer_list.append(parallel_minor)
+
+    mode_dict = {1: "ionian", 2: "dorian", 3: "phrygian", 4: "lydian", 5: "mixolydian", 7: "locrian"}
+    scale_degrees = list(mode_dict.keys())
+
+    while len(answer_list) != 4:
+        random_scale_degree = random.choice(scale_degrees)
+        wrong_pitch = current_scale_pitches.pitchFromDegree(random_scale_degree)
+        mode_name = mode_dict[random_scale_degree]
+
+        if output == "xml":
+            wrong_answer = call_question_function("scale", user_level, {"0": [wrong_pitch], "1": [mode_name], "2": correct_duration})[0]
+            if wrong_answer.pitches != correct_answer.pitches:
+                wrong_answer = export_m21_to_xml(wrong_answer)
+                answer_list.append(wrong_answer)
+        else:
+            wrong_answer = [str(p.name) for p in scale.AbstractDiatonicScale(mode_name).getRealization(wrong_pitch, 1)]
+            if wrong_answer not in answer_list:
+                answer_list.append(wrong_answer)
+
+    random.shuffle(answer_list)
+    correct_answer_index = answer_list.index(correct_answer) + 1
+
+    return answer_list, correct_answer_index
+
+def answer_diatonic_chord(q_dict, user_level, output="string", mc=False):
+    answer_list = []
+    current_scale = q_dict[2][2]
+    random_scale_degree = random.randrange(1, len(current_scale), 1)
+    triad_degrees = [random_scale_degree]
+
+    for _ in range(2):
+        random_scale_degree += 2
+        next_degree = random_scale_degree if random_scale_degree <= 7 else random_scale_degree - 7
+        triad_degrees.append(next_degree)
+
+    diatonic_chord = chord.Chord([current_scale[triad_degrees[i]].name for i in range(3)])
+
+    if output == "string":
+        correct_answer = harmony.chordSymbolFromChord(diatonic_chord).figure
+    else:  # output == "xml"
+        correct_stream = stream.Stream()
+        correct_stream.append(diatonic_chord)
+        correct_answer = correct_stream
+        correct_answer = export_m21_to_xml(correct_answer)
+
+    if not mc:
+        return correct_answer
+
+    answer_list.append(correct_answer)
+
+    while len(answer_list) != 4:
+        random_scale_degree = random.randrange(1, len(current_scale), 1)
+        random_quality = random.choice(["", "m", "+", "dim"])
+        wrong_chord = call_question_function("chord", user_level, {"0": [current_scale[random_scale_degree]], "1": [random_quality], "2": False})
+        wrong_chord_pitch_names = set(wrong_chord.pitchNames)
+
+        if len(wrong_chord_pitch_names.intersection(set([p.name for p in current_scale]))) != len(wrong_chord.pitchNames):
+            if output == "string":
+                wrong_answer = harmony.chordSymbolFromChord(wrong_chord).figure
+            else:  # output == "xml"
+                wrong_stream = stream.Stream()
+                wrong_stream.append(wrong_chord)
+                wrong_answer = wrong_stream
+                wrong_answer = export_m21_to_xml(wrong_answer)
+
+            if wrong_answer not in answer_list:
+                answer_list.append(wrong_answer)
+
+    random.shuffle(answer_list)
+    correct_answer_index = answer_list.index(correct_answer) + 1
+
+    return answer_list, correct_answer_index
+
+def answer_non_diatonic_chord(q_dict, user_level, output="string", mc=False):
+    answer_list = []
+    current_scale = q_dict[2][2]
+    random_scale_degree = random.randrange(1, len(current_scale), 1)
+
+    # Finding a non-diatonic chord
+    while True:
+        random_quality = random.choice(["", "m", "+", "dim"])
+        wrong_chord = call_question_function("chord", user_level, {"0": [current_scale[random_scale_degree]], "1": [random_quality], "2": False})
+        if len(set(wrong_chord.pitchNames).intersection(set([p.name for p in current_scale]))) != len(wrong_chord.pitchNames):
+            break
+
+    if output == "string":
+        correct_answer = harmony.chordSymbolFromChord(wrong_chord).figure
+    else:  # output == "xml"
+        correct_stream = stream.Stream()
+        correct_stream.append(wrong_chord)
+        correct_stream.makeNotation()
+        correct_answer = correct_stream
+        correct_answer = export_m21_to_xml(correct_answer)
+
+    if mc == False:
+        return correct_answer
+    else:
+        answer_list.append(correct_answer)
+
+        while len(answer_list) != 4:
+            random_scale_degree = random.randrange(1, len(current_scale), 1)
+            triad_degrees = [random_scale_degree]
+
+        for n in range(2):
+            degree_count = (triad_degrees[-1] + 2) % 7
+            if degree_count == 0:
+                degree_count = 7
+            triad_degrees.append(degree_count)
+
+        diatonic_chord = chord.Chord([current_scale[triad_degrees[0]].name, current_scale[triad_degrees[1]].name, current_scale[triad_degrees[2]].name])
+
+        if output == "string":
+            diatonic_chord_figure = harmony.chordSymbolFromChord(diatonic_chord).figure
+        else:  # output == "xml"
+            diatonic_chord_stream = stream.Stream()
+            diatonic_chord_stream.append(diatonic_chord)
+            diatonic_chord_figure = diatonic_chord_stream
+            diatonic_chord_figure = export_m21_to_xml(diatonic_chord_figure)
+
+        if diatonic_chord_figure not in answer_list:
+            answer_list.append(diatonic_chord_figure)
+
+        while len(answer_list) != 4:
+            random_scale_degree = random.randrange(1, len(current_scale), 1)
+            random_quality = random.choice(["", "m", "+", "dim"])
+            another_wrong_chord = call_question_function("chord", user_level, {"0": [current_scale[random_scale_degree]], "1": [random_quality], "2": False})
+
+            if output == "string":
+                another_wrong_chord_figure = harmony.chordSymbolFromChord(another_wrong_chord).figure
+            else:  # output == "xml"
+                another_wrong_chord_stream = stream.Stream()
+                another_wrong_chord_stream.append(another_wrong_chord)
+                another_wrong_chord_figure = another_wrong_chord_stream
+                another_wrong_chord_figure = export_m21_to_xml(another_wrong_chord_figure)
+
+            if len(set(another_wrong_chord.pitchNames).intersection(set([p.name for p in current_scale]))) != len(another_wrong_chord.pitchNames):
+                if another_wrong_chord_figure not in answer_list:
+                    answer_list.append(another_wrong_chord_figure)
+
+        random.shuffle(answer_list)
+        correct_answer_index = answer_list.index(correct_answer) + 1
+
+        return answer_list, correct_answer_index
+
+
+    
 

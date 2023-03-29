@@ -1,87 +1,14 @@
 import random
-import user
-from scamp import *
-from theory import *
-from qa_util import *
-from music21 import base, chord, harmony, interval, key, musicxml, note, pitch, roman, scale, stream
+
 from googletrans import Translator
-from levels import question_levels, content_levels
+from music21 import (chord, harmony, interval, key, musicxml, note, pitch,
+                     scale, stream)
+from scamp import *
 
-
-def call_question_function(function_string, input_user_level, content_override = {}):
-
-    if input_user_level[0] == "T":
-        book = "theory"
-    elif input_user_level[0] == "R":
-        book = "rhythm"
-    if input_user_level[0] == "L":
-        book = "listen" 
-
-    admin_content = content_levels[user.instrument][book][input_user_level]
-
-    if len(function_defaults[function_string]) >= 1:
-        if len(content_override) > 0 and "0" in list(content_override.keys()):
-            function_fill_0 = content_override["0"]
-        else:
-            if len(admin_content) > 0 and "0" in list(admin_content["generate " + function_string].keys()):
-                function_fill_0 = admin_content["generate " + function_string]["0"]
-            else:
-                function_fill_0 = function_defaults[function_string][0]
-            
-    if len(function_defaults[function_string]) >= 2:
-        if len(content_override) > 0 and "1" in list(content_override.keys()):
-            function_fill_1 = content_override["1"]
-        else:
-            if len(admin_content) > 0 and "1" in list(admin_content["generate " + function_string].keys()):
-                function_fill_1 = admin_content["generate " + function_string]["1"]
-            else:
-                function_fill_1 = function_defaults[function_string][1]
-
-    if len(function_defaults[function_string]) >= 3:
-        if len(content_override) > 0 and "2" in list(content_override.keys()):
-            function_fill_2 = content_override["2"]
-        else:
-            if len(admin_content) > 0 and "2" in list(admin_content["generate " + function_string].keys()):
-                function_fill_2 = admin_content["generate " + function_string]["2"]
-            else:
-                function_fill_2 = function_defaults[function_string][2]
-
-    if len(function_defaults[function_string]) >= 4:
-        if len(content_override) > 0 and "3" in list(content_override.keys()):
-            function_fill_3 = content_override["3"]
-        else:
-            if len(admin_content) > 0 and "3" in list(admin_content["generate " + function_string].keys()):
-                function_fill_3 = admin_content["generate " + function_string]["3"]
-            else:
-                function_fill_3 = function_defaults[function_string][3]
-
-    if len(function_defaults[function_string]) >= 5:
-        if len(content_override) > 0 and "4" in list(content_override.keys()):
-            function_fill_4 = content_override["4"]
-        else:
-            if len(admin_content) > 0 and "4" in list(admin_content["generate " + function_string].keys()):
-                function_fill_4 = admin_content["generate " + function_string]["4"]
-            else:
-                function_fill_4 = function_defaults[function_string][4]
-
-    if function_string == "note":
-        return generate_note(function_fill_0, function_fill_1, function_fill_2)
-    elif function_string == "chord":
-        return generate_chord(function_fill_0, function_fill_1, function_fill_2)
-    elif function_string == "chord progression":
-        return generate_chord_progression(function_fill_0, function_fill_1, function_fill_2)
-    elif function_string == "interval":
-        return generate_interval(function_fill_0, function_fill_1, function_fill_2, function_fill_3)
-    elif function_string == "scale":
-        return generate_scale(function_fill_0, function_fill_1, function_fill_2)
-    elif function_string == "excerpt":
-        return generate_excerpt(function_fill_0, function_fill_1, function_fill_2)
-    elif function_string == "rhythm":
-        return generate_rhythm(function_fill_0, function_fill_1, function_fill_2, function_fill_3)
-    elif function_string == "arpeggio":
-        return generate_arpeggio(function_fill_0, function_fill_1, function_fill_2)
-    elif function_string == "note value":
-        return generate_note_value(function_fill_0, function_fill_1)
+import user
+from levels import question_levels
+from qa_util import *
+from theory import *
 
 #149 possible combinations#
 def generate_question(input_question_type, input_answer_type, input_user_level): #will need to take into consideration the blank notes
@@ -489,12 +416,9 @@ def generate_question(input_question_type, input_answer_type, input_user_level):
             }
             }
 
-    if input_user_level[0] == "T":
-        book = "theory"
-    elif input_user_level[0] == "R":
-        book = "rhythm"
-    if input_user_level[0] == "L":
-        book = "listen"   
+    book_map = {"T": "theory", "R": "rhythm", "L": "listen"}
+    book = book_map[input_user_level[0]]
+
     question_choice_name = random.choice(question_levels[user.instrument][book][int(input_user_level[1])]["lessons"][int(input_user_level[-1])]["question choices"][input_question_type][input_answer_type])
     question_text = question_options_dict[input_answer_type][question_choice_name][0]
     xml_render = call_question_function(question_options_dict[input_answer_type][question_choice_name][1], input_user_level=input_user_level)
@@ -643,17 +567,14 @@ def generate_question(input_question_type, input_answer_type, input_user_level):
 
 def generate_answer(input_answer_type, input_question_type, question_dict, input_user_level):
 
-    def generate_text_answer(input_question_type, question_dict, input_user_level): #complete
+    def generate_text_answer(input_question_type, question_dict): #complete
 
         if input_question_type == "text":
             if question_dict[0] == "chord intervals":
-                chord_intervals = question_dict[2].measure(1)[0].annotateIntervals(inPlace=False, stripSpecifiers=False)
-                chord_intervals = [ly.text for ly in reversed(chord_intervals.lyrics)]
-                return chord_intervals
+                return answer_chord_intervals(question_dict)
             
             elif question_dict[0] == "chord intervals half steps":
-                chord_intervals = question_dict[2].measure(1)[0].annotateIntervals(inPlace=False, stripSpecifiers=False)
-                chord_intervals = [ly.text for ly in reversed(chord_intervals.lyrics)]
+                chord_intervals = answer_chord_intervals(question_dict)
                 half_step_intervals = [interval.Interval(h).semitones for h in chord_intervals]
                 return half_step_intervals
             
@@ -864,14 +785,11 @@ def generate_answer(input_answer_type, input_question_type, question_dict, input
                     arp_inversion = "root"
                 return arp_inversion
 
-    def generate_piano_answer(input_question_type, question_dict, input_user_level): #complete
+    def generate_piano_answer(input_question_type, question_dict): #complete
 
         if input_question_type == "text":
             if question_dict[0] == "play pitch":
-                note_string_form = question_dict[2].flatten().notes.stream()[0].name
-                if "-" in note_string_form:
-                    note_string_form = note_string_form.replace("-", "b")
-                return note_string_form
+                return answer_play_pitch(question_dict)
             
             elif question_dict[0] == "play chord tone":
                 return question_dict[2].measure(1)[0].getChordStep(question_dict[3]).name
@@ -893,10 +811,7 @@ def generate_answer(input_answer_type, input_question_type, question_dict, input
 
         elif input_question_type == "note":
             if question_dict[0] == "play pitch":
-                note_string_form = question_dict[2].flatten().notes.stream()[0].name
-                if "-" in note_string_form:
-                    note_string_form = note_string_form.replace("-", "b")
-                return note_string_form
+                return answer_play_pitch(question_dict)
                 
         elif input_question_type == "chord":
             if question_dict[0] == "play chord tone":
@@ -916,50 +831,43 @@ def generate_answer(input_answer_type, input_question_type, question_dict, input
             if question_dict[0] == "play chord tone":
                 return question_dict[2][2].getChordStep(question_dict[3])
 
-    def generate_record_answer(input_question_type, question_dict, input_user_level): #complete
+    def generate_record_answer(input_question_type, question_dict): #complete
 
         if input_question_type == "text":
             if question_dict[0] == "play pitch":
-                note_string_form = question_dict[2].flatten().notes.stream()[0].name
-                if "-" in note_string_form:
-                    note_string_form = note_string_form.replace("-", "b")
-                return note_string_form
+                return answer_play_pitch(question_dict)
             
             elif question_dict[0] == "play chord":
                 chord_symbol = harmony.chordSymbolFromChord(question_dict[2].measure(1)[0])
-                return chord_symbol
+                return chord_symbol.figure
             
             elif question_dict[0] == "play scale":
                 scale_pitch_list = [n.name for n in question_dict[2][0].pitches]
                 return scale_pitch_list
             
             elif question_dict[0] == "play arp":
-                return question_dict[2][1]
+                return export_m21_to_xml(question_dict[2][1])
 
         elif input_question_type == "audio":
             if question_dict[0] == "play rhythm":
-                return question_dict[2]
+                return export_m21_to_xml(question_dict[2])
 
         elif input_question_type == "note":
             if question_dict[0] == "play pitch":
-                note_string_form = question_dict[2].flatten().notes.stream()[0].name
-                if "-" in note_string_form:
-                    note_string_form = note_string_form.replace("-", "b")
-                return note_string_form
+                return answer_play_pitch(question_dict)
                    
         elif input_question_type == "chord":
             if question_dict[0] == "play chord":
                 chord_symbol = harmony.chordSymbolFromChord(question_dict[2].measure(1)[0])
-                return chord_symbol
+                return chord_symbol.figure
 
         elif input_question_type == "chord progression":
             if question_dict[0] == "play progression":
-                return question_dict[2].flatten().notes.stream()
+                return export_m21_to_xml(question_dict[2])
 
         elif input_question_type == "interval":
             if question_dict[0] == "play interval":
-                correct_note = question_dict[2][0].measure(1).notes.stream()
-                return correct_note
+                return export_m21_to_xml(question_dict[2][0])
 
         elif input_question_type == "scale":
             scale_pitch_list = [n.name for n in question_dict[2][0].pitches]
@@ -967,99 +875,28 @@ def generate_answer(input_answer_type, input_question_type, question_dict, input
                 return scale_pitch_list
             
         elif input_question_type == "excerpt":
-            return question_dict[2].flatten().notes.stream()
+            return export_m21_to_xml(question_dict[2])
 
         elif input_question_type == "rhythm":
-            return question_dict[2]
+            return export_m21_to_xml(question_dict[2])
 
         elif input_question_type == "arpeggio":
-            return question_dict[2][1]
+            return export_m21_to_xml(question_dict[2][1])
 
     def generate_mc_text_answer(input_question_type, question_dict, input_user_level): #complete
 
         if input_question_type == "text":
             if question_dict[0] == "convert roman":
-                answer_list = []
-                correct_answer = harmony.chordSymbolFromChord(chord.Chord(roman.RomanNumeral(question_dict[3], question_dict[2].keySignature.asKey()).pitches)).figure
-                answer_list.append(correct_answer)
-                while len(answer_list) != 4:
-                    random_quality = random.choice(["", "m", "+", "dim"])
-                    wrong_answer = harmony.chordSymbolFromChord(call_question_function("chord", {"1": [random_quality]}, input_user_level)).figure
-                    if wrong_answer not in answer_list:
-                        answer_list.append(wrong_answer)
-                random.shuffle(answer_list)
-                return answer_list, str(answer_list.index(correct_answer) + 1)
+                return answer_convert_roman(question_dict, input_user_level, mc=True)
 
             elif question_dict[0] == "relative minor":
-                answer_list = []
-                current_scale_pitches = scale.DiatonicScale(question_dict[2][2][0])
-                correct_answer = list([str(p.name) for p in current_scale_pitches.getRelativeMinor().pitches])
-                answer_list.append(correct_answer)
-                parallel_minor = list([str(p.name) for p in current_scale_pitches.getParallelMinor().pitches])
-                answer_list.append(parallel_minor)
-                while len(answer_list) != 4:
-                    mode_dict = {1: "ionian", 2: "dorian", 3: "phrygian", 4: "lydian", 5: "mixolydian", 7: "locrian"}
-                    scale_degrees = list(mode_dict.keys())
-                    random_scale_degree = random.choice(scale_degrees)
-                    wrong_pitch = current_scale_pitches.pitchFromDegree(random_scale_degree)
-                    wrong_answer = list([str(p.name) for p in scale.AbstractDiatonicScale(mode_dict[random_scale_degree]).getRealization(wrong_pitch, 1)])
-                    if wrong_answer not in answer_list:
-                        answer_list.append(wrong_answer)
-                random.shuffle(answer_list)
-                return answer_list, str(answer_list.index(correct_answer) + 1)
+                return answer_relative_minor_scale(question_dict, mc=True)
             
             elif question_dict[0] == "diatonic chord":
-                answer_list = []
-                current_scale = question_dict[2][2]
-                random_scale_degree = random.randrange(1, len(current_scale), 1)
-                triad_degrees = []
-                triad_degrees.append(random_scale_degree)
-                degree_count = random_scale_degree
-                for n in range(2):
-                    degree_count += 2
-                    next_degree = degree_count
-                    if next_degree > 7:
-                        next_degree = next_degree - 7
-                    triad_degrees.append(next_degree)
-                diatonic_chord = chord.Chord([current_scale[triad_degrees[0]].name, current_scale[triad_degrees[1]].name, current_scale[triad_degrees[2]].name])
-                correct_answer = harmony.chordSymbolFromChord(diatonic_chord).figure
-                answer_list.append(correct_answer)
-                while len(answer_list) != 4:
-                    random_scale_degree = random.randrange(1, len(current_scale), 1)
-                    random_quality = random.choice(["", "m", "+", "dim"])
-                    wrong_answer = call_question_function("chord", {"0": [current_scale[random_scale_degree]], "1":[random_quality], "2": False}, input_user_level)
-                    if len(set(wrong_answer.pitchNames).intersection(set([p.name for p in current_scale]))) != len(wrong_answer.pitchNames):
-                        if wrong_answer not in answer_list:
-                            answer_list.append(harmony.chordSymbolFromChord(wrong_answer).figure)
-                random.shuffle(answer_list)
-                return answer_list, str(answer_list.index(correct_answer) + 1)
+                return answer_diatonic_chord(question_dict, input_user_level, mc=True)
 
             elif question_dict[0] == "nondiatonic chord":
-                answer_list = []
-                current_scale = question_dict[2][2]
-                random_scale_degree = random.randrange(1, len(current_scale), 1)
-                random_quality = random.choice(["", "m", "+", "dim"])
-                wrong_answer = call_question_function("chord", {"0": [current_scale[random_scale_degree]], "1":[random_quality], "2": False}, input_user_level)
-                while len(set(wrong_answer.pitchNames).intersection(set([p.name for p in current_scale]))) != len(wrong_answer.pitchNames):
-                    wrong_answer = call_question_function("chord", {"0": [current_scale[random_scale_degree]], "1":[random_quality], "2": False}, input_user_level)
-                    correct_answer = harmony.chordSymbolFromChord(wrong_answer).figure
-                    answer_list.append(correct_answer)
-                while len(answer_list) != 4:
-                    random_scale_degree = random.randrange(1, len(current_scale), 1)
-                    triad_degrees = []
-                    triad_degrees.append(random_scale_degree)
-                    degree_count = random_scale_degree
-                    for n in range(2):
-                        degree_count += 2
-                        next_degree = degree_count
-                        if next_degree > 7:
-                            next_degree = next_degree - 7
-                        triad_degrees.append(next_degree)
-                    diatonic_chord = chord.Chord([current_scale[triad_degrees[0]].name, current_scale[triad_degrees[1]].name, current_scale[triad_degrees[2]].name])
-                    if harmony.chordSymbolFromChord(diatonic_chord).figure not in answer_list:
-                        answer_list.append(harmony.chordSymbolFromChord(diatonic_chord).figure)
-                random.shuffle(answer_list)
-                return answer_list, str(answer_list.index(correct_answer) + 1)
+                return answer_non_diatonic_chord(question_dict, input_user_level, mc=True)
             
             elif question_dict[0] == "note value subdivision":
                 answer_list = []
@@ -1071,27 +908,25 @@ def generate_answer(input_answer_type, input_question_type, question_dict, input
                     if str(wrong_answer) not in answer_list:
                         answer_list.append(str(wrong_answer))
                 random.shuffle(answer_list)
-                return answer_list, str(answer_list.index(correct_answer) + 1)
+                return answer_list, answer_list.index(correct_answer) + 1
             
             elif question_dict[0] == "note value duration":
                 answer_list = []
                 note_duration = int(question_dict[2][1].duration.quarterLength)
-                if note_duration > 1:
-                    correct_answer = str(note_duration) + " beats"
-                else:
+                correct_answer = str(note_duration) + " beats"
+                if note_duration <= 1:
                     correct_answer = str(note_duration) + " beat"
                 answer_list.append(correct_answer)
                 while len(answer_list) != 4:
                     duration_list = [0.25, 0.5, 1, 2, 3, 4]
                     random_duration = random.choice(duration_list)
-                    if random_duration > 1:
-                        wrong_answer = str(random_duration) + " beats"
-                    else:
+                    wrong_answer = str(random_duration) + " beats"
+                    if random_duration <= 1:
                         wrong_answer = str(random_duration) + " beat"
                     if wrong_answer not in answer_list:
                         answer_list.append(wrong_answer)
                 random.shuffle(answer_list)
-                return answer_list, str(answer_list.index(correct_answer) + 1)
+                return answer_list, answer_list.index(correct_answer) + 1
 
         elif input_question_type == "audio":
             if question_dict[0] == "quality":
@@ -1108,25 +943,15 @@ def generate_answer(input_answer_type, input_question_type, question_dict, input
             elif question_dict[0] == "inversion":
                 answer_list = []
                 inversion_string_form = question_dict[2].measure(1)[0].inversion()
-                if inversion_string_form == 0:
-                    correct_answer = "root"
-                    answer_list.append(correct_answer)
-                elif inversion_string_form == 1:
-                    correct_answer = "first"
-                    answer_list.append(correct_answer)
-                elif inversion_string_form == 2:
-                    correct_answer = "second"
-                    answer_list.append(correct_answer)
-                elif inversion_string_form == 3:
-                    correct_answer = "third"
-                    answer_list.append(correct_answer)
+                inversion_map = {0: "root", 1: "first", 2: "second", 3: "third"}
+                correct_answer = inversion_map[inversion_string_form]
                 while len(answer_list) != 4:
                     inversion_list = ["root", "first", "second", "third", "fourth", "fifth", "sixth"]
                     wrong_answer = random.choice(inversion_list)
                     if wrong_answer not in answer_list:
                         answer_list.append(wrong_answer)
                 random.shuffle(answer_list)
-                return answer_list, str(answer_list.index(correct_answer) + 1)
+                return answer_list, answer_list.index(correct_answer) + 1
             
             elif question_dict[0] == "roman numerals":
                 current_scale_pitches = question_dict[2].keySignature.getScale("major")
@@ -1143,7 +968,7 @@ def generate_answer(input_answer_type, input_question_type, question_dict, input
                     for w in wrong_prog.flatten().notes.stream():
                         wrong_answer.append(convert_to_roman_numerals(w, wrong_prog.keySignature.asKey()))
                     answer_list.append(wrong_answer)
-                return answer_list, str(answer_list.index(correct_answer) + 1)
+                return answer_list, answer_list.index(correct_answer) + 1
             
             elif question_dict[0] == "correct name":
                 answer_list = []
@@ -1173,7 +998,7 @@ def generate_answer(input_answer_type, input_question_type, question_dict, input
                     if wrong_mode not in answer_list:
                         answer_list.append(wrong_mode)
                 random.shuffle(answer_list)
-                return answer_list, str(answer_list.index(correct_answer) + 1)
+                return answer_list, answer_list.index(correct_answer) + 1
             
             elif question_dict[0] == "note value subdivision":
                 answer_list = []
@@ -1185,7 +1010,7 @@ def generate_answer(input_answer_type, input_question_type, question_dict, input
                     if str(wrong_answer) not in answer_list:
                         answer_list.append(str(wrong_answer))
                 random.shuffle(answer_list)
-                return answer_list, str(answer_list.index(correct_answer) + 1)
+                return answer_list, answer_list.index(correct_answer) + 1
             
             elif question_dict[0] == "beats":
                 answer_list = []
@@ -1200,7 +1025,7 @@ def generate_answer(input_answer_type, input_question_type, question_dict, input
                     if str(int(wrong_answer)) not in answer_list:
                         answer_list.append(str(int(wrong_answer)))
                 random.shuffle(answer_list)
-                return answer_list, str(answer_list.index(correct_answer) + 1)
+                return answer_list, answer_list.index(correct_answer) + 1
             
             elif question_dict[0] == "note value duration":
                 answer_list = []
@@ -1213,7 +1038,7 @@ def generate_answer(input_answer_type, input_question_type, question_dict, input
                     if wrong_answer not in answer_list:
                         answer_list.append(wrong_answer)
                 random.shuffle(answer_list)
-                return answer_list, str(answer_list.index(correct_answer) + 1)
+                return answer_list, answer_list.index(correct_answer) + 1
             
             elif question_dict[0] == "arp quality":
                 answer_list = []
@@ -1224,7 +1049,7 @@ def generate_answer(input_answer_type, input_question_type, question_dict, input
                     if wrong_answer not in answer_list:
                         answer_list.append(wrong_answer)
                 random.shuffle(answer_list)
-                return answer_list, str(answer_list.index(correct_answer) + 1)
+                return answer_list, answer_list.index(correct_answer) + 1
             
             elif question_dict[0] == "arp inversion":
                 answer_list = []
@@ -1238,7 +1063,7 @@ def generate_answer(input_answer_type, input_question_type, question_dict, input
                     if wrong_answer not in answer_list:
                         answer_list.append(wrong_answer)
                 random.shuffle(answer_list)
-                return answer_list, str(answer_list.index(correct_answer) + 1)
+                return answer_list, answer_list.index(correct_answer) + 1
 
         elif input_question_type == "note":
             if question_dict[0] == "identify pitch":
@@ -1279,25 +1104,16 @@ def generate_answer(input_answer_type, input_question_type, question_dict, input
             elif question_dict[0] == "inversion":
                 answer_list = []
                 inversion_string_form = question_dict[2].measure(1)[0].inversion()
-                if inversion_string_form == 0:
-                    correct_answer = "root"
-                    answer_list.append(correct_answer)
-                elif inversion_string_form == 1:
-                    correct_answer = "first"
-                    answer_list.append(correct_answer)
-                elif inversion_string_form == 2:
-                    correct_answer = "second"
-                    answer_list.append(correct_answer)
-                elif inversion_string_form == 3:
-                    correct_answer = "third"
-                    answer_list.append(correct_answer)
+                inversion_map = {0: "root", 1: "first", 2: "second", 3: "third"}
+                correct_answer = inversion_map[inversion_string_form]
+                answer_list.append(correct_answer)
                 while len(answer_list) != 4:
                     inversion_list = ["root", "first", "second", "third", "fourth", "fifth", "sixth"]
                     wrong_answer = random.choice(inversion_list)
                     if wrong_answer not in answer_list:
                         answer_list.append(wrong_answer)
                 random.shuffle(answer_list)
-                return answer_list, str(answer_list.index(correct_answer) + 1)
+                return answer_list, answer_list.index(correct_answer) + 1
 
         elif input_question_type == "chord progression":
             if question_dict[0] == "determine key":
@@ -1309,7 +1125,7 @@ def generate_answer(input_answer_type, input_question_type, question_dict, input
                     if wrong_key not in answer_list:
                         answer_list.append(wrong_key)
                 random.shuffle(answer_list)
-                return answer_list, str(answer_list.index(correct_answer) + 1)
+                return answer_list, answer_list.index(correct_answer) + 1
             
             elif question_dict[0] == "find common tone":
                 answer_list = []
@@ -1329,7 +1145,7 @@ def generate_answer(input_answer_type, input_question_type, question_dict, input
                     if wrong_note not in answer_list and wrong_note not in common_tones:
                         answer_list.append(wrong_note)
                 random.shuffle(answer_list)
-                return answer_list, str(answer_list.index(correct_answer) + 1)
+                return answer_list, answer_list.index(correct_answer) + 1
 
             elif question_dict[0] == "find non diatonic":
                 scale_pitches = question_dict[2].keySignature.getScale("major").pitches
@@ -1351,7 +1167,7 @@ def generate_answer(input_answer_type, input_question_type, question_dict, input
                 while len(answer_list) != 4:
                     answer_list.append(random.choice(wrong_answer_list))
                 random.shuffle(answer_list)
-                return answer_list, str(answer_list.index(correct_answer) + 1)
+                return answer_list, answer_list.index(correct_answer) + 1
 
             elif question_dict[0] == "roman numerals":
                 current_scale_pitches = question_dict[2].keySignature.getScale("major")
@@ -1368,7 +1184,7 @@ def generate_answer(input_answer_type, input_question_type, question_dict, input
                     for w in wrong_prog.flatten().notes.stream():
                         wrong_answer.append(convert_to_roman_numerals(w, wrong_prog.keySignature.asKey()))
                     answer_list.append(wrong_answer)
-                return answer_list, str(answer_list.index(correct_answer) + 1)
+                return answer_list, answer_list.index(correct_answer) + 1
 
         elif input_question_type == "interval":
             if question_dict[0] == "correct name":
@@ -1400,7 +1216,7 @@ def generate_answer(input_answer_type, input_question_type, question_dict, input
                     if wrong_mode not in answer_list:
                         answer_list.append(wrong_mode)
                 random.shuffle(answer_list)
-                return answer_list, str(answer_list.index(correct_answer) + 1)
+                return answer_list, answer_list.index(correct_answer) + 1
                 
             elif question_dict[0] == "relative minor":
                 answer_list = []
@@ -1418,7 +1234,7 @@ def generate_answer(input_answer_type, input_question_type, question_dict, input
                     if wrong_answer not in answer_list:
                         answer_list.append(wrong_answer)
                 random.shuffle(answer_list)
-                return answer_list, str(answer_list.index(correct_answer) + 1)
+                return answer_list, answer_list.index(correct_answer) + 1
             
             elif question_dict[0] == "diatonic chord":
                 answer_list = []
@@ -1444,7 +1260,7 @@ def generate_answer(input_answer_type, input_question_type, question_dict, input
                         if wrong_answer not in answer_list:
                             answer_list.append(harmony.chordSymbolFromChord(wrong_answer).figure)
                 random.shuffle(answer_list)
-                return answer_list, str(answer_list.index(correct_answer) + 1)
+                return answer_list, answer_list.index(correct_answer) + 1
 
             elif question_dict[0] == "nondiatonic chord":
                 answer_list = []
@@ -1470,7 +1286,7 @@ def generate_answer(input_answer_type, input_question_type, question_dict, input
                     if harmony.chordSymbolFromChord(diatonic_chord).figure not in answer_list:
                         answer_list.append(harmony.chordSymbolFromChord(diatonic_chord).figure)
                 random.shuffle(answer_list)
-                return answer_list, str(answer_list.index(correct_answer) + 1)
+                return answer_list, answer_list.index(correct_answer) + 1
             
         elif input_question_type == "excerpt":
             if question_dict[0] == "determine key":
@@ -1482,7 +1298,7 @@ def generate_answer(input_answer_type, input_question_type, question_dict, input
                     if wrong_key not in answer_list:
                         answer_list.append(wrong_key)
                 random.shuffle(answer_list)
-                return answer_list, str(answer_list.index(correct_answer) + 1)
+                return answer_list, answer_list.index(correct_answer) + 1
             
         elif input_question_type == "rhythm":
             if question_dict[0] == "subdivision":
@@ -1495,7 +1311,7 @@ def generate_answer(input_answer_type, input_question_type, question_dict, input
                     if str(wrong_answer) not in answer_list:
                         answer_list.append(str(wrong_answer))
                 random.shuffle(answer_list)
-                return answer_list, str(answer_list.index(correct_answer) + 1)
+                return answer_list, answer_list.index(correct_answer) + 1
             
             elif question_dict[0] == "beats":
                 answer_list = []
@@ -1510,7 +1326,7 @@ def generate_answer(input_answer_type, input_question_type, question_dict, input
                     if str(int(wrong_answer)) not in answer_list:
                         answer_list.append(str(int(wrong_answer)))
                 random.shuffle(answer_list)
-                return answer_list, str(answer_list.index(correct_answer) + 1)
+                return answer_list, answer_list.index(correct_answer) + 1
 
             elif question_dict[0] == "duration":
                 answer_list = []
@@ -1523,7 +1339,7 @@ def generate_answer(input_answer_type, input_question_type, question_dict, input
                     if wrong_answer not in answer_list:
                         answer_list.append(wrong_answer)
                 random.shuffle(answer_list)
-                return answer_list, str(answer_list.index(correct_answer) + 1)
+                return answer_list, answer_list.index(correct_answer) + 1
             
             elif question_dict[0] == "note value duration":
                 answer_list = []
@@ -1543,7 +1359,7 @@ def generate_answer(input_answer_type, input_question_type, question_dict, input
                     if wrong_answer not in answer_list:
                         answer_list.append(wrong_answer)
                 random.shuffle(answer_list)
-                return answer_list, str(answer_list.index(correct_answer) + 1)
+                return answer_list, answer_list.index(correct_answer) + 1
 
         elif input_question_type == "arpeggio":
             if question_dict[0] == "chord name":
@@ -1555,7 +1371,7 @@ def generate_answer(input_answer_type, input_question_type, question_dict, input
                     if wrong_answer not in answer_list:
                         answer_list.append(wrong_answer)
                 random.shuffle(answer_list)
-                return answer_list, str(answer_list.index(correct_answer) + 1)
+                return answer_list, answer_list.index(correct_answer) + 1
             
             elif question_dict[0] == "arp inversion":
                 answer_list = []
@@ -1569,7 +1385,7 @@ def generate_answer(input_answer_type, input_question_type, question_dict, input
                     if wrong_answer not in answer_list:
                         answer_list.append(wrong_answer)
                 random.shuffle(answer_list)
-                return answer_list, str(answer_list.index(correct_answer) + 1)
+                return answer_list, answer_list.index(correct_answer) + 1
             
     def generate_mc_xml_answer(input_question_type, question_dict, input_user_level): #complete
 
@@ -1578,15 +1394,18 @@ def generate_answer(input_answer_type, input_question_type, question_dict, input
                 answer_list = []
                 correct_answer = question_dict[2]
                 correct_inversion = correct_answer.measure(1)[0].inversion(question_dict[3])
+                correct_answer = export_m21_to_xml(correct_answer)
                 answer_list.append(correct_answer)
                 while len(answer_list) != 4:
                     random_inversion = random.randrange(0, len(correct_answer.pitches), 1)
                     wrong_answer = correct_answer
                     wrong_answer.measure(1)[0].inversion(random_inversion)
                     if random_inversion != correct_inversion:
+                        wrong_answer = export_m21_to_xml(wrong_answer)
                         answer_list.append(wrong_answer)
                 random.shuffle(answer_list)
-                return answer_list, str(answer_list.index(correct_answer) + 1)
+                correct_answer_index = answer_list.index(correct_answer)
+                return answer_list, correct_answer_index
             
             elif question_dict[0] == "possible mode":
                 answer_list = []
@@ -1601,104 +1420,25 @@ def generate_answer(input_answer_type, input_question_type, question_dict, input
                     correct_note.duration.quarterLength = correct_duration
                     correct_answer.append(correct_note)
                 correct_answer.makeMeasures()
+                correct_answer = export_m21_to_xml(correct_answer)
                 answer_list.append(correct_answer)
                 while len(answer_list) != 4:
-                    wrong_answer = call_question_function("scale", {"0":[correct_mode[0]], "2": correct_duration}, input_user_level)[0]
+                    wrong_answer = call_question_function("scale", input_user_level, {"0":[correct_mode[0]], "2": correct_duration})[0]
                     if wrong_answer.pitches != correct_mode:
+                        wrong_answer = export_m21_to_xml(wrong_answer)
                         answer_list.append(wrong_answer)
                 random.shuffle(answer_list)
-                return answer_list, str(answer_list.index(correct_answer) + 1)
+                correct_answer_index = answer_list.index(correct_answer)
+                return answer_list, correct_answer_index
             
             elif question_dict[0] == "relative minor":
-                answer_list = []
-                current_scale_pitches = scale.DiatonicScale(question_dict[2][2][0])
-                correct_pitches = list([str(p) for p in current_scale_pitches.getRelativeMinor().pitches])
-                correct_duration = question_dict[2][0].measure(1)[0].duration.quarterLength
-                correct_answer = stream.Stream()
-                for c in correct_pitches:
-                    correct_note = note.Note(c)
-                    correct_note.duration.quarterLength = correct_duration
-                    correct_answer.append(correct_note)
-                correct_answer.makeMeasures()
-                answer_list.append(correct_answer)
-                parallel_minor = list([str(p) for p in current_scale_pitches.getParallelMinor().pitches])
-                parallel_minor_answer = stream.Stream()
-                for p in parallel_minor:
-                    pm_note = note.Note(p)
-                    pm_note.duration.quarterLength = correct_duration
-                    parallel_minor_answer.append(pm_note)
-                parallel_minor_answer.makeMeasures()
-                answer_list.append(parallel_minor_answer)
-                while len(answer_list) != 4:
-                    mode_dict = {1: "ionian", 2: "dorian", 3: "phrygian", 4: "lydian", 5: "mixolydian", 7: "locrian"}
-                    scale_degrees = list(mode_dict.keys())
-                    random_scale_degree = random.choice(scale_degrees)
-                    wrong_pitch = current_scale_pitches.pitchFromDegree(random_scale_degree)
-                    wrong_answer = call_question_function("scale", {"0":[wrong_pitch], "1":[mode_dict[random_scale_degree]], "2": correct_duration}, input_user_level)[0]
-                    if wrong_answer.pitches != correct_pitches:
-                        answer_list.append(wrong_answer)
-                random.shuffle(answer_list)
-                return answer_list, str(answer_list.index(correct_answer) + 1)
+                return answer_relative_minor_scale(question_dict, input_user_level, "xml", mc=True)
 
             elif question_dict[0] == "diatonic chord":
-                answer_list = []
-                current_scale = question_dict[2][2]
-                random_scale_degree = random.randrange(1, len(current_scale), 1)
-                triad_degrees = []
-                triad_degrees.append(random_scale_degree)
-                degree_count = random_scale_degree
-                for n in range(2):
-                    degree_count += 2
-                    next_degree = degree_count
-                    if next_degree > 7:
-                        next_degree = next_degree - 7
-                    triad_degrees.append(next_degree)
-                correct_stream = stream.Stream()
-                diatonic_chord = chord.Chord([current_scale[triad_degrees[0]].name, current_scale[triad_degrees[1]].name, current_scale[triad_degrees[2]].name])
-                correct_stream.append(diatonic_chord)
-                answer_list.append(correct_stream)
-                while len(answer_list) != 4:
-                    wrong_stream = stream.Stream()
-                    random_scale_degree = random.randrange(1, len(current_scale), 1)
-                    random_quality = random.choice(["", "m", "+", "dim"])
-                    nondiatonic_chord = call_question_function("chord", {"0":[current_scale[random_scale_degree]], "1":[random_quality], "2": False}, input_user_level)
-                    if len(set(nondiatonic_chord.pitchNames).intersection(set([p.name for p in current_scale]))) != len(nondiatonic_chord.pitchNames):
-                        if nondiatonic_chord not in answer_list:
-                            wrong_stream.append(nondiatonic_chord)
-                            answer_list.append(wrong_stream)
-                random.shuffle(answer_list)
-                return answer_list, str(answer_list.index(correct_stream) + 1)
+                return answer_diatonic_chord(question_dict, input_user_level, "xml", mc=True)
 
             elif question_dict[0] == "nondiatonic chord":
-                answer_list = []
-                current_scale = question_dict[2][2]
-                random_scale_degree = random.randrange(1, len(current_scale), 1)
-                while len(answer_list) != 1:
-                    random_quality = random.choice(["", "m", "+", "dim"])
-                    nondiatonic_chord = call_question_function("chord", {"0":[current_scale[random_scale_degree]], "1":[random_quality], "2": False}, input_user_level)
-                    nondiatonic_chord_figure = harmony.chordSymbolFromChord(nondiatonic_chord).figure
-                    correct_stream = stream.Stream()
-                    if len(set(nondiatonic_chord.pitchNames).intersection(set([p.name for p in current_scale]))) != len(nondiatonic_chord.pitchNames):
-                        correct_stream.append(nondiatonic_chord)
-                        answer_list.append(correct_stream)
-                while len(answer_list) != 4:
-                    wrong_stream = stream.Stream()
-                    random_scale_degree = random.randrange(1, len(current_scale), 1)
-                    triad_degrees = []
-                    triad_degrees.append(random_scale_degree)
-                    degree_count = random_scale_degree
-                    for n in range(2):
-                        degree_count += 2
-                        next_degree = degree_count
-                        if next_degree > 7:
-                            next_degree = next_degree - 7
-                        triad_degrees.append(next_degree)
-                    diatonic_chord = chord.Chord([current_scale[triad_degrees[0]].name, current_scale[triad_degrees[1]].name, current_scale[triad_degrees[2]].name])
-                    if harmony.chordSymbolFromChord(diatonic_chord).figure != nondiatonic_chord_figure:
-                        wrong_stream.append(diatonic_chord)
-                        answer_list.append(wrong_stream)
-                random.shuffle(answer_list)
-                return answer_list, str(answer_list.index(correct_stream) + 1)
+                return answer_non_diatonic_chord(question_dict, input_user_level, "xml", mc=True)
 
         elif input_question_type == "audio":
             if question_dict[0] == "same duration":
@@ -1709,6 +1449,7 @@ def generate_answer(input_answer_type, input_question_type, question_dict, input
                 correct_note.duration.quarterLength = correct_rhythm_length
                 correct_answer.makeNotation()
                 correct_answer.append(correct_note)
+                correct_answer = export_m21_to_xml(correct_answer)
                 answer_list.append(correct_answer)
                 while len(answer_list) != 4:
                     wrong_answer = stream.Stream()
@@ -1716,58 +1457,70 @@ def generate_answer(input_answer_type, input_question_type, question_dict, input
                     wrong_note.duration.quarterLength = random.randrange(1, 5)
                     wrong_answer.append(wrong_note)
                     if wrong_note.duration.quarterLength != correct_rhythm_length:
-                        correct_answer.makeNotation()
+                        wrong_answer.makeNotation()
+                        wrong_answer = export_m21_to_xml(wrong_answer)
                         answer_list.append(wrong_answer)
                 random.shuffle(answer_list)
-                return answer_list, str(answer_list.index(correct_answer) + 1)
+                correct_answer_index = answer_list.index(correct_answer)
+                return answer_list, correct_answer_index
 
         elif input_question_type == "note":
             if question_dict[0] == "match":
                 answer_list = []
                 correct_answer = question_dict[2]
                 correct_note = question_dict[2].measure(1)[0].pitch
+                correct_answer = export_m21_to_xml(correct_answer)
                 answer_list.append(correct_answer)
                 while len(answer_list) != 4:
                     wrong_answer = call_question_function("note", input_user_level=input_user_level)
                     wrong_note = wrong_answer.measure(1)[0].pitch
                     if wrong_note != correct_note:
+                        wrong_answer = export_m21_to_xml(wrong_answer)
                         answer_list.append(wrong_answer)
                 random.shuffle(answer_list)
-                return answer_list, str(answer_list.index(correct_answer) + 1)
+                correct_answer_index = answer_list.index(correct_answer)
+                return answer_list, correct_answer_index
                   
         elif input_question_type == "chord":
             if question_dict[0] == "correct inversion":
                 answer_list = []
                 correct_answer = question_dict[2]
                 correct_inversion = correct_answer.measure(1)[0].inversion(question_dict[3])
+                correct_answer = export_m21_to_xml(correct_answer)
                 answer_list.append(correct_answer)
                 while len(answer_list) != 4:
                     random_inversion = random.randrange(0, len(correct_answer.pitches), 1)
                     wrong_answer = correct_answer
                     wrong_answer.measure(1)[0].inversion(random_inversion)
                     if random_inversion != correct_inversion:
+                        wrong_answer = export_m21_to_xml(wrong_answer)
                         answer_list.append(wrong_answer)
                 random.shuffle(answer_list)
-                return answer_list, str(answer_list.index(correct_answer) + 1)
+                correct_answer_index = answer_list.index(correct_answer)
+                return answer_list, correct_answer_index
 
             elif question_dict[0] == "correct interval transposition":
                 answer_list = []
                 correct_answer = question_dict[2]
                 correct_chord = correct_answer.measure(1)[0].transpose(question_dict[3])
+                correct_answer = export_m21_to_xml(correct_answer)
                 answer_list.append(correct_answer)
                 while len(answer_list) != 4:
                     random_transpo = random.randrange(-6, 6, 1)
                     wrong_answer = correct_answer
                     wrong_chord = wrong_answer.measure(1)[0].transpose(random_transpo)
                     if wrong_chord != correct_chord:
+                        wrong_answer = export_m21_to_xml(wrong_answer)
                         answer_list.append(wrong_answer)
                 random.shuffle(answer_list)
-                return answer_list, str(answer_list.index(correct_answer) + 1)
+                correct_answer_index = answer_list.index(correct_answer)
+                return answer_list, correct_answer_index
 
         elif input_question_type == "chord progression":
             if question_dict[0] == "is transposition":
                 answer_list = []
                 correct_answer = question_dict[2].transpose(random.randrange(-6, 6, 1))
+                correct_answer = export_m21_to_xml(correct_answer)
                 answer_list.append(correct_answer)
                 major_scale = scale.DiatonicScale(question_dict[2].keySignature.asKey().getTonic())
                 while len(answer_list) != 4:
@@ -1794,34 +1547,42 @@ def generate_answer(input_answer_type, input_question_type, question_dict, input
 
                                 wrong_stream.measure(temp_measure.measureNumber).insert(chord_reharm.offset, temp_chord)
 
+                    wrong_stream = export_m21_to_xml(wrong_stream)
                     answer_list.append(wrong_stream)
                 random.shuffle(answer_list)
-                return answer_list, str(answer_list.index(correct_answer) + 1)
+                correct_answer_index = answer_list.index(correct_answer)
+                return answer_list, correct_answer_index
             
             elif question_dict[0] == "specific transposition":
                 answer_list = []
                 correct_answer = question_dict[2].transpose(question_dict[3])
+                correct_answer = export_m21_to_xml(correct_answer)
                 answer_list.append(correct_answer)
                 while len(answer_list) != 4:
                     random_interval = random.randrange(-6, 6, 1)
                     if question_dict[3].semitones != random_interval:
                         wrong_answer = question_dict[2].transpose(random.randrange(-6, 6, 1))
+                        wrong_answer = export_m21_to_xml(wrong_answer)
                         answer_list.append(wrong_answer)
                 random.shuffle(answer_list)
-                return answer_list, str(answer_list.index(correct_answer) + 1)
+                correct_answer_index = answer_list.index(correct_answer)
+                return answer_list, correct_answer_index
 
         elif input_question_type == "interval":
             if question_dict[0] == "correct transposition":
                 answer_list = []
                 correct_answer = question_dict[2][0].transpose(question_dict[3])
+                correct_answer = export_m21_to_xml(correct_answer)
                 answer_list.append(correct_answer)
                 while len(answer_list) != 4:
                     random_interval = random.randrange(-6, 6, 1)
                     if question_dict[3].semitones != random_interval:
                         wrong_answer = question_dict[2][0].transpose(random_interval)
+                        wrong_answer = export_m21_to_xml(wrong_answer)
                         answer_list.append(wrong_answer)
                 random.shuffle(answer_list)
-                return answer_list, str(answer_list.index(correct_answer) + 1)
+                correct_answer_index = answer_list.index(correct_answer)
+                return answer_list, correct_answer_index
 
         elif input_question_type == "scale":
             if question_dict[0] == "possible mode":
@@ -1837,126 +1598,56 @@ def generate_answer(input_answer_type, input_question_type, question_dict, input
                     correct_note.duration.quarterLength = correct_duration
                     correct_answer.append(correct_note)
                 correct_answer.makeMeasures()
+                correct_answer = export_m21_to_xml(correct_answer)
                 answer_list.append(correct_answer)
                 while len(answer_list) != 4:
-                    wrong_answer = call_question_function("scale", {"0":[correct_mode[0]], "2":correct_duration}, input_user_level)[0]
+                    wrong_answer = call_question_function("scale", input_user_level, {"0":[correct_mode[0]], "2":correct_duration})[0]
                     if wrong_answer.pitches != correct_mode:
+                        wrong_answer = export_m21_to_xml(wrong_answer)
                         answer_list.append(wrong_answer)
                 random.shuffle(answer_list)
-                return answer_list, str(answer_list.index(correct_answer) + 1)
+                correct_answer_index = answer_list.index(correct_answer)
+                return answer_list, correct_answer_index
 
             elif question_dict[0] == "relative minor":
-                answer_list = []
-                current_scale_pitches = scale.DiatonicScale(question_dict[2][2][0])
-                correct_pitches = list([str(p) for p in current_scale_pitches.getRelativeMinor().pitches])
-                correct_duration = question_dict[2][0].measure(1)[0].duration.quarterLength
-                correct_answer = stream.Stream()
-                for c in correct_pitches:
-                    correct_note = note.Note(c)
-                    correct_note.duration.quarterLength = correct_duration
-                    correct_answer.append(correct_note)
-                correct_answer.makeMeasures()
-                answer_list.append(correct_answer)
-                parallel_minor = list([str(p) for p in current_scale_pitches.getParallelMinor().pitches])
-                parallel_minor_answer = stream.Stream()
-                for p in parallel_minor:
-                    pm_note = note.Note(p)
-                    pm_note.duration.quarterLength = correct_duration
-                    parallel_minor_answer.append(pm_note)
-                parallel_minor_answer.makeMeasures()
-                answer_list.append(parallel_minor_answer)
-                while len(answer_list) != 4:
-                    mode_dict = {1: "ionian", 2: "dorian", 3: "phrygian", 4: "lydian", 5: "mixolydian", 7: "locrian"}
-                    scale_degrees = list(mode_dict.keys())
-                    random_scale_degree = random.choice(scale_degrees)
-                    wrong_pitch = current_scale_pitches.pitchFromDegree(random_scale_degree)
-                    wrong_answer = generate_scale(scale_tonic_list=[wrong_pitch], mode_list=[mode_dict[random_scale_degree]], specified_duration=correct_duration)[0]
-                    if wrong_answer.pitches != correct_pitches:
-                        answer_list.append(wrong_answer)
-                random.shuffle(answer_list)
-                return answer_list, str(answer_list.index(correct_answer) + 1)
+                return answer_relative_minor_scale(question_dict, input_user_level, output="xml", mc=True)
 
             elif question_dict[0] == "diatonic chord":
-                answer_list = []
-                current_scale = question_dict[2][2]
-                random_scale_degree = random.randrange(1, len(current_scale), 1)
-                triad_degrees = []
-                triad_degrees.append(random_scale_degree)
-                degree_count = random_scale_degree
-                for n in range(2):
-                    degree_count += 2
-                    next_degree = degree_count
-                    if next_degree > 7:
-                        next_degree = next_degree - 7
-                    triad_degrees.append(next_degree)
-                correct_stream = stream.Stream()
-                diatonic_chord = chord.Chord([current_scale[triad_degrees[0]].name, current_scale[triad_degrees[1]].name, current_scale[triad_degrees[2]].name])
-                correct_stream.append(diatonic_chord)
-                answer_list.append(correct_stream)
-                while len(answer_list) != 4:
-                    wrong_stream = stream.Stream()
-                    random_scale_degree = random.randrange(1, len(current_scale), 1)
-                    random_quality = random.choice(["", "m", "+", "dim"])
-                    nondiatonic_chord = generate_chord(current_scale[random_scale_degree], random_quality)
-                    if len(set(nondiatonic_chord.pitchNames).intersection(set([p.name for p in current_scale]))) != len(nondiatonic_chord.pitchNames):
-                        if nondiatonic_chord not in answer_list:
-                            wrong_stream.append(nondiatonic_chord)
-                            answer_list.append(wrong_stream)
-                random.shuffle(answer_list)
-                return answer_list, str(answer_list.index(correct_stream) + 1)
+                return answer_diatonic_chord(question_dict, input_user_level, output="xml", mc=True)
 
             elif question_dict[0] == "nondiatonic chord":
-                answer_list = []
-                current_scale = question_dict[2][2]
-                random_scale_degree = random.randrange(1, len(current_scale), 1)
-                random_quality = random.choice(["", "m", "+", "dim"])
-                nondiatonic_chord = generate_chord(current_scale[random_scale_degree], random_quality)
-                nondiatonic_chord_figure = harmony.chordSymbolFromChord(nondiatonic_chord).figure
-                correct_stream = stream.Stream()
-                if len(set(nondiatonic_chord.pitchNames).intersection(set([p.name for p in current_scale]))) != len(nondiatonic_chord.pitchNames):
-                    correct_stream.append(nondiatonic_chord)
-                    answer_list.append(correct_stream)
-                while len(answer_list) != 4:
-                    wrong_stream = stream.Stream()
-                    random_scale_degree = random.randrange(1, len(current_scale), 1)
-                    triad_degrees = []
-                    triad_degrees.append(random_scale_degree)
-                    degree_count = random_scale_degree
-                    for n in range(2):
-                        degree_count += 2
-                        next_degree = degree_count
-                        if next_degree > 7:
-                            next_degree = next_degree - 7
-                        triad_degrees.append(next_degree)
-                    diatonic_chord = chord.Chord([current_scale[triad_degrees[0]].name, current_scale[triad_degrees[1]].name, current_scale[triad_degrees[2]].name])
-                    if harmony.chordSymbolFromChord(diatonic_chord).figure != nondiatonic_chord_figure:
-                        wrong_stream.append(diatonic_chord)
-                        answer_list.append(wrong_stream)
-                random.shuffle(answer_list)
-                return answer_list, str(answer_list.index(correct_stream) + 1)
+                return answer_non_diatonic_chord(question_dict, input_user_level, output="xml", mc=True)
             
         elif input_question_type == "excerpt":
             if question_dict[0] == "what measure":
                 answer_list = []
                 correct_answer = stream.Stream(question_dict[2].measure(question_dict[3]))
+                correct_answer = export_m21_to_xml(correct_answer)
                 answer_list.append(correct_answer)
                 while len(answer_list) != 4:
-                    wrong_answer = call_question_function("excerpt", {"2":1}, input_user_level)
+                    wrong_answer = call_question_function("excerpt", input_user_level, {"2":1})
                     if wrong_answer.flatten().notesAndRests != correct_answer.flatten().notesAndRests:
+                        wrong_answer = export_m21_to_xml(wrong_answer)
                         answer_list.append(wrong_answer)
                 random.shuffle(answer_list)
-                return answer_list, str(answer_list.index(correct_answer) + 1)
+                correct_answer_index = answer_list.index(correct_answer)
+                return answer_list, correct_answer_index
 
             elif question_dict[0] == "what beat":
                 answer_list = []
                 correct_answer = stream.Stream(question_dict[3])
+                correct_answer = export_m21_to_xml(correct_answer)
                 answer_list.append(correct_answer)
                 while len(answer_list) != 4:
+                    wrong_answer = stream.Stream()
                     wrong_note = random.choice(question_dict[2].flatten().notesAndRests)
                     if wrong_note != question_dict[3]:
-                        answer_list.append(stream.Stream(wrong_note))
+                        wrong_answer.append(wrong_note)
+                        wrong_answer = export_m21_to_xml(wrong_answer)
+                        answer_list.append(wrong_answer)
                 random.shuffle(answer_list)
-                return answer_list, str(answer_list.index(correct_answer) + 1)
+                correct_answer_index = answer_list.index(correct_answer)
+                return answer_list, correct_answer_index
 
         elif input_question_type == "rhythm":
             if question_dict[0] == "same duration":
@@ -1967,6 +1658,7 @@ def generate_answer(input_answer_type, input_question_type, question_dict, input
                 correct_note.duration.quarterLength = correct_rhythm_length
                 correct_answer.makeNotation()
                 correct_answer.append(correct_note)
+                correct_answer = export_m21_to_xml(correct_answer)
                 answer_list.append(correct_answer)
                 while len(answer_list) != 4:
                     wrong_answer = stream.Stream()
@@ -1975,21 +1667,26 @@ def generate_answer(input_answer_type, input_question_type, question_dict, input
                     wrong_answer.append(wrong_note)
                     if wrong_note.duration.quarterLength != correct_rhythm_length:
                         correct_answer.makeNotation()
+                        wrong_answer = export_m21_to_xml(wrong_answer)
                         answer_list.append(wrong_answer)
                 random.shuffle(answer_list)
-                return answer_list, str(answer_list.index(correct_answer) + 1)
+                correct_answer_index = answer_list.index(correct_answer)
+                return answer_list, correct_answer_index
 
         elif input_question_type == "arpeggio":
             if question_dict[0] == "correct transposition":
                 answer_list = []
                 correct_answer = question_dict[2][0].transpose(random.randrange(-6, 6, 1))
+                correct_answer = export_m21_to_xml(correct_answer)
                 answer_list.append(correct_answer)
                 while len(answer_list) != 4:
                     wrong_arp = call_question_function("arpeggio", input_user_level=input_user_level)[0]
                     if wrong_arp.pitches != correct_answer.pitches:
+                        wrong_arp = export_m21_to_xml(wrong_arp)
                         answer_list.append(wrong_arp)
                 random.shuffle(answer_list)
-                return answer_list, str(answer_list.index(correct_answer) + 1)
+                correct_answer_index = answer_list.index(correct_answer)
+                return answer_list, correct_answer_index
 
     def generate_mc_audio_answer(input_question_type, question_dict, input_user_level): #complete
     
@@ -2046,7 +1743,7 @@ def generate_answer(input_answer_type, input_question_type, question_dict, input
                             wrong_midi = (w.pitch.midi, 1, w.duration.quarterLength)
                             wrong_answer.append(wrong_midi)
                     answer_list.append(wrong_answer)
-                return answer_list, str(answer_list.index(correct_answer) + 1)
+                return answer_list, answer_list.index(correct_answer) + 1
             
             elif question_dict[0] == "correct scale mode audio":
                 answer_list = []
@@ -2065,7 +1762,7 @@ def generate_answer(input_answer_type, input_question_type, question_dict, input
                             wrong_answer.append(wrong_midi)
                     answer_list.append(wrong_answer)
                 random.shuffle(answer_list)
-                return answer_list, str(answer_list.index(correct_answer) + 1)
+                return answer_list, answer_list.index(correct_answer) + 1
             
             elif question_dict[0] == "correct arp quality":
                 answer_list = []
@@ -2076,7 +1773,7 @@ def generate_answer(input_answer_type, input_question_type, question_dict, input
                     if wrong_answer not in answer_list:
                         answer_list.append(wrong_answer)
                 random.shuffle(answer_list)
-                return answer_list, str(answer_list.index(correct_answer) + 1)
+                return answer_list, answer_list.index(correct_answer) + 1
             
             elif question_dict[0] == "correct arp inversion":
                 answer_list = []
@@ -2091,7 +1788,7 @@ def generate_answer(input_answer_type, input_question_type, question_dict, input
                     inverted_chord.inversion(set_inversion_int)
                     answer_list.append(inverted_chord)
                 random.shuffle(answer_list)
-                return answer_list, str(answer_list.index(correct_answer) + 1)
+                return answer_list, answer_list.index(correct_answer) + 1
 
         elif input_question_type == "audio":
             if question_dict[0] == "inversion":
@@ -2130,7 +1827,7 @@ def generate_answer(input_answer_type, input_question_type, question_dict, input
                             wrong_midi = (w.pitch.midi, 1, w.duration.quarterLength)
                             wrong_answer.append(wrong_midi)
                     answer_list.append(wrong_answer)
-                return answer_list, str(answer_list.index(correct_answer) + 1)
+                return answer_list, answer_list.index(correct_answer) + 1
             
             elif question_dict[0] == "correct quality":
                 pass
@@ -2195,7 +1892,7 @@ def generate_answer(input_answer_type, input_question_type, question_dict, input
                     if wrong_answer not in answer_list:
                         answer_list.append(wrong_answer)
                 random.shuffle(answer_list)
-                return answer_list, str(answer_list.index(correct_answer) + 1)
+                return answer_list, answer_list.index(correct_answer) + 1
 
         elif input_question_type == "interval":
             if question_dict[0] == "correct audio":
@@ -2216,7 +1913,7 @@ def generate_answer(input_answer_type, input_question_type, question_dict, input
                             wrong_midi = (w.pitch.midi, 1, w.duration.quarterLength)
                             wrong_answer.append(wrong_midi)
                     answer_list.append(wrong_answer)
-                return answer_list, str(answer_list.index(correct_answer) + 1)
+                return answer_list, answer_list.index(correct_answer) + 1
 
         elif input_question_type == "scale":
             if question_dict[0] == "correct mode audio":
@@ -2229,14 +1926,14 @@ def generate_answer(input_answer_type, input_question_type, question_dict, input
                 answer_list.append(correct_answer)
                 while len(answer_list) != 4:
                     wrong_answer = []
-                    wrong_scale = call_question_function("scale", {"0":[scale_string[0]]}, input_user_level)
+                    wrong_scale = call_question_function("scale", input_user_level, {"0":[scale_string[0]]})
                     if wrong_scale[2] != scale_string:
                         for w in wrong_scale[2]:
                             wrong_midi = (pitch.Pitch(w).midi, 1, 1)
                             wrong_answer.append(wrong_midi)
                     answer_list.append(wrong_answer)
                 random.shuffle(answer_list)
-                return answer_list, str(answer_list.index(correct_answer) + 1)
+                return answer_list, answer_list.index(correct_answer) + 1
             
         elif input_question_type == "excerpt":
             if question_dict[0] == "correct audio":
@@ -2265,7 +1962,7 @@ def generate_answer(input_answer_type, input_question_type, question_dict, input
                     if wrong_answer not in answer_list:
                         answer_list.append(wrong_answer)
                 random.shuffle(answer_list)
-                return answer_list, str(answer_list.index(correct_answer) + 1)
+                return answer_list, answer_list.index(correct_answer) + 1
 
         elif input_question_type == "rhythm":
             if question_dict[0] == "correct audio":
@@ -2290,7 +1987,7 @@ def generate_answer(input_answer_type, input_question_type, question_dict, input
                     if wrong_answer not in answer_list:
                         answer_list.append(wrong_answer)
                 random.shuffle(answer_list)
-                return answer_list, str(answer_list.index(correct_answer) + 1)
+                return answer_list, answer_list.index(correct_answer) + 1
 
         elif input_question_type == "arpeggio": #this one needs fixing
             if question_dict[0] == "correct quality":
@@ -2302,7 +1999,7 @@ def generate_answer(input_answer_type, input_question_type, question_dict, input
                     if wrong_answer not in answer_list:
                         answer_list.append(wrong_answer)
                 random.shuffle(answer_list)
-                return answer_list, str(answer_list.index(correct_answer) + 1)
+                return answer_list, answer_list.index(correct_answer) + 1
             
             elif question_dict[0] == "correct inversion":
                 answer_list = []
@@ -2317,130 +2014,56 @@ def generate_answer(input_answer_type, input_question_type, question_dict, input
                     inverted_chord.inversion(set_inversion_int)
                     answer_list.append(inverted_chord)
                 random.shuffle(answer_list)
-                return answer_list, str(answer_list.index(correct_answer) + 1)
+                return answer_list, answer_list.index(correct_answer) + 1
 
-    def generate_drag_drop_keyboard_answer(input_question_type, question_dict, input_user_level): #hold off
+    answer_type_map = {
+        "text": generate_text_answer,
+        "piano": generate_piano_answer,
+        "record": generate_record_answer,
+        "mc text": generate_mc_text_answer,
+        "mc xml": generate_mc_xml_answer,
+        "mc audio": generate_mc_audio_answer,
+    }
 
-        if input_question_type == "note":
-            pass
-                  
-        elif input_question_type == "chord":
-            pass
+    if input_answer_type in answer_type_map:
+        new_answer = answer_type_map[input_answer_type](input_question_type, question_dict, input_user_level)
+    else:
+        raise ValueError(f"Unknown input_answer_type: {input_answer_type}")
 
-        elif input_question_type == "chord progression":
-            pass
-
-        elif input_question_type == "interval":
-            pass
-
-        elif input_question_type == "scale":
-            pass
-            
-        elif input_question_type == "excerpt":
-            pass
-
-        elif input_question_type == "rhythm":
-            pass
-
-        elif input_question_type == "arpeggio":
-            pass
-
-    def generate_drag_drop_snippet_answer(input_question_type, question_dict, input_user_level): #hold off
-
-        if input_question_type == "note":
-            pass
-                  
-        elif input_question_type == "chord":
-            pass
-
-        elif input_question_type == "chord progression":
-            pass
-
-        elif input_question_type == "interval":
-            pass
-
-        elif input_question_type == "scale":
-            pass
-            
-        elif input_question_type == "excerpt":
-            pass
-
-        elif input_question_type == "rhythm":
-            pass
-
-        elif input_question_type == "arpeggio":
-            pass
-
-    if input_answer_type == "text":
-        new_answer = generate_text_answer(input_question_type, question_dict, input_user_level)
-    
-    elif input_answer_type == "piano":
-        new_answer = generate_piano_answer(input_question_type, question_dict, input_user_level)
-    
-    elif input_answer_type == "record":
-        new_answer = generate_record_answer(input_question_type, question_dict, input_user_level)
-    
-    elif input_answer_type == "mc text":
-        new_answer = generate_mc_text_answer(input_question_type, question_dict, input_user_level)
-
-    elif input_answer_type == "mc xml":
-        new_answer = generate_mc_xml_answer(input_question_type, question_dict, input_user_level)
-
-    elif input_answer_type == "mc audio":
-        new_answer = generate_mc_audio_answer(input_question_type, question_dict, input_user_level)
-
-    if type(new_answer) in [stream.Stream, stream.Measure]:
-        musicXML_exporter = musicxml.m21ToXml.ScoreExporter(new_answer, makeNotation=True)
-        return musicXML_exporter.parse()
-    elif type(new_answer) == tuple and type(new_answer[0][0]) in [stream.Stream, stream.Measure]:
-        converted_list = []
-        for item in new_answer[0]:
-            musicXML_exporter = musicxml.m21ToXml.ScoreExporter(item, makeNotation=True)
-            converted_list.append(musicXML_exporter.parse())
-        return (converted_list, new_answer[1])
     return new_answer
-
+    
 
 ### 0 = prompt text, 1 = question render (if included), 2 = question text, 3 = answer elements (if multiple choice, will be tuple)
 def generate_screen(question_type, answer_type, user_level, user_language="en"):
+    
+    def translate_text(text, language):
+        if language == "es":
+            translator = Translator()
+            translation = translator.translate(text, dest=language)
+            return translation.text
+        return text
 
-    ###Create prompt text###
+    # Create prompt text
     prompt_text = generate_prompt_text(question_type, answer_type, user_language)
 
-    ###Generate question ###
+    # Generate question
     question_elements = generate_question(question_type, answer_type, user_level)
 
-
+    # Export question to musicXML
     question_render = None
-
-    ### Export to musicXML ###
     if question_type not in ["text", "audio"]:
         finished_question = question_elements[2]
-        # print(question_elements)
-        if type(finished_question) == tuple:
-            # finished_question[0].show("text")
-            musicXML_exporter = musicxml.m21ToXml.ScoreExporter(finished_question[0], makeNotation=True)
-        else:
-            # finished_question.show("text")
-            musicXML_exporter = musicxml.m21ToXml.ScoreExporter(finished_question, makeNotation=True)
-        question_render = musicXML_exporter.parse()
+        question_render = export_m21_to_xml(finished_question[0] if isinstance(finished_question, tuple) else finished_question)
 
-    ### Export to MIDI ###
-    elif question_type == "audio":
-        pass
+    # Export to mp3
+    # TODO: Add code for exporting to mp3 if needed
 
-    ### Translate question text ###
-    if user_language == "es":
-        translator = Translator()
-        translation = translator.translate(question_elements[1], dest=user_language)
-        question_string = translation.text
-    elif user_language == "en":
-        question_string = question_elements[1]
+    # Translate question text
+    question_string = translate_text(question_elements[1], user_language)
 
-    ### Generate answer ###
-    answer_elements = generate_answer(answer_type, question_type, question_elements, user_level)
+    # Generate answer
+    answer_elements = generate_answer(answer_type, question_type, question_elements, input_user_level=user_level)
 
     return prompt_text, question_render, question_string, answer_elements
-
 
 
